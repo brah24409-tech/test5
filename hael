@@ -163,35 +163,15 @@ pcall(function()
 
     local safeGetHui = getSafeGuiContainer
 
-    if not gethui then
-        gethui = safeGetHui
-        pcall(function() if getgenv then getgenv().gethui = safeGetHui end end)
-    else
-        local success, result = pcall(gethui)
-        if not success or not result or typeof(result) ~= "Instance" then
-            gethui = safeGetHui
-            pcall(function() if getgenv then getgenv().gethui = safeGetHui end end)
-        end
-    end
-
-    -- Safe filesystem wrapper with pcall instead of complete suppression
-    local oldMakefolder = makefolder
+    -- Environment filesystem and UI helpers (Pure non-invasive wrappers matching BloxStrike)
+    local oldMakefolder = typeof(makefolder) == "function" and makefolder or nil
     local safeMakefolder = function(path)
-        if oldMakefolder then
-            pcall(function() oldMakefolder(path) end)
-        end
+        if oldMakefolder then pcall(oldMakefolder, path) end
     end
-    makefolder = safeMakefolder
-    if getgenv then getgenv().makefolder = safeMakefolder end
-
-    local oldWritefile = writefile
+    local oldWritefile = typeof(writefile) == "function" and writefile or nil
     local safeWritefile = function(path, content)
-        if oldWritefile then
-            pcall(function() oldWritefile(path, content) end)
-        end
+        if oldWritefile then pcall(oldWritefile, path, content) end
     end
-    writefile = safeWritefile
-    if getgenv then getgenv().writefile = safeWritefile end
 end)
 
 -- ==============================================================================
@@ -7744,7 +7724,11 @@ local ScreenGui = Create("ScreenGui", {
 })
 
 do
-	local container = (typeof(getSafeGuiContainer) == "function" and getSafeGuiContainer()) or (typeof(gethui) == "function" and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
+	-- On mobile/Delta, PlayerGui ensures touch gestures, drags, and elements render directly
+	local container = (_isMobile or _isDelta) and LocalPlayer:WaitForChild("PlayerGui") 
+		or (typeof(getSafeGuiContainer) == "function" and getSafeGuiContainer()) 
+		or (typeof(gethui) == "function" and gethui()) 
+		or LocalPlayer:WaitForChild("PlayerGui")
 	ScreenGui.Parent = container
 end
 Library.ScreenGui = ScreenGui
@@ -23378,6 +23362,9 @@ do
         task.wait(0.5)
     end
 
+    end
+    do
+        local MANSION_DOORS_POS = Vector3.new(-12455, 335, -7698)
     --// NPC DETECTION: JACK O' LANTERN & PUMPKIN SNOWMAN
     _G.DeadPumpkinMobs = _G.DeadPumpkinMobs or {}
 
